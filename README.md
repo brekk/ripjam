@@ -73,7 +73,7 @@ If the `shared` is given two implementations like the above and the `answers` ob
 If you would like to use a different testing framework, you can manually assemble the same behavior like so:
 ```js
 // custom-ripjam.js
-import { riptestWithConfiguration } from 'ripjam/test'
+import { riptestWithConfiguration, sameImplementation, sameInterface } from 'ripjam/test'
 
 // you supply these
 const binaryTestingFunction = (str, run) => test(str, run)
@@ -81,8 +81,10 @@ const binaryAssertionFunction = (input, output) => expect(input).toEqual(output)
 
 const customhook = () => {
   const riptest = riptestWithConfiguration(binaryTestingFunction, binaryAssertionFunction)
-  const same = sameImplementation({riptest, check: binaryTestingFunction, claim: binaryAssertionFunction})
-  return {riptest, same}
+  const config = {riptest, check: binaryTestingFunction, claim: binaryAssertionFunction}
+  const same = sameImplementation(config)
+  const shared = sameInterface(config)
+  return { riptest, same, shared }
 }
 
 export const hook = customhook
