@@ -1230,8 +1230,8 @@ const riptestWithConfiguration = curry(
   function _riptestWithConfiguration(
     check,
     claim,
-    name,
     fn,
+    name,
     input,
     output
   ) {
@@ -1243,15 +1243,14 @@ const riptestWithConfiguration = curry(
 
 const sameImplementation = curry(function _sameImplementation(
   { riptest, check, claim },
-  name,
   [a, b],
+  name,
   input,
   output
 ) {
-  const tester = riptest(name);
-  const [a2, b2] = map(tester, [a, b]);
-  a2(input, output);
-  b2(input, output);
+  const [a2, b2] = map(riptest, [a, b]);
+  a2(name, input, output);
+  b2(name, input, output);
   check(
     `same implementation of "${name}": (${functionDetails(
       a

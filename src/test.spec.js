@@ -7,10 +7,13 @@ function basic(x) {
   return x * 2
 }
 
-riptest('basic test', basic, 1, 2)
+const testBasic = riptest(basic)
+
+testBasic('basic test', 1, 2)
+testBasic('basic test with array params', [1], 2)
 
 const mult = curry(function _multiply(a, b) {
   return a * b
 })
 
-same('double', [mult(2), basic], 100, 200)
+same([mult(2), basic], 'double', 100, 200)
