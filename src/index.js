@@ -1,1 +1,2 @@
-export const ripjam = () => `RIPJAM ALPHA`
+export * from './utils'
+export * from './function'
