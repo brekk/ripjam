@@ -11,7 +11,7 @@ By default it is designed to work out of the box with `jest` but it's very easy 
 ```js
 // test.spec.js
 import { curry } from 'ramda'
-import { hook } from './testing-tools'
+import { hook } from 'ripjam/test'
 
 const { riptest, same, shared } = hook()
 
@@ -52,7 +52,7 @@ shared(
 After running `jest` on the above, it will print:
 
 ```
-PASS src/test.spec.js
+PASS test.spec.js
   ✓ "basic test": 𝞴 "basic" (unary) (2 ms)
   ✓ "basic test with array params": 𝞴 "basic" (unary)
   ✓ "double": 𝞴 unnamed (unary)
