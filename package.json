@@ -1,0 +1,43 @@
+{
+  "devDependencies": {
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.12.16",
+    "@rollup/plugin-alias": "^3.1.2",
+    "@rollup/plugin-babel": "^5.2.3",
+    "@rollup/plugin-commonjs": "^17.1.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^11.1.1",
+    "babel-jest": "^26.6.3",
+    "eslint": "^7.20.0",
+    "eslint-config-sorcerers": "^0.0.6",
+    "jest": "^26.6.3",
+    "nps": "^5.10.0",
+    "prettier": "^2.2.1",
+    "prettier-eslint": "^12.0.0",
+    "rollup": "^2.39.0",
+    "rollup-plugin-add-shebang": "^0.3.1"
+  },
+  "dependencies": {
+    "envtrace": "^0.0.2",
+    "ramda": "^0.27.1",
+    "snang": "^0.1.4"
+  },
+  "name": "ripjam",
+  "version": "0.0.0",
+  "description": "tools for breaking and re-assembling things",
+  "main": "ripjam.js",
+  "module": "ripjam.mjs",
+  "files": [
+    "ripjam.js",
+    "ripjam.mjs",
+    "test.js",
+    "test.mjs"
+  ],
+  "repository": "https://github.com/brekk/ripjam",
+  "author": "brekk",
+  "license": "ISC",
+  "private": false,
+  "scripts": {
+    "start": "nps"
+  }
+}
