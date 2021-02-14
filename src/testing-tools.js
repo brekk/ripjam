@@ -1,4 +1,23 @@
-import { apply, map, curry, cond, equals, always as K } from 'ramda'
+import {
+  __ as $,
+  nth,
+  pipe,
+  toPairs,
+  groupBy,
+  head,
+  filter,
+  reject,
+  length,
+  chain,
+  apply,
+  map,
+  curry,
+  cond,
+  propOr,
+  equals,
+  always as K
+} from 'ramda'
+import { trace } from 'xtrace'
 import { defined } from './utils'
 import { functionDetails } from './function'
 
@@ -35,18 +54,51 @@ export const sameImplementation = curry(function _sameImplementation(
   )
 })
 
+export const sameInterface = curry(function _sameInterface(
+  { riptest, check, claim },
+  [a, b],
+  name,
+  structure
+) {
+  pipe(
+    chain(toPairs),
+    groupBy(head),
+    reject(pipe(length, equals(1))),
+    map(map(nth(1))),
+    toPairs,
+    filter(([k, v]) =>
+      pipe(propOr(false, k), raw =>
+        raw
+          ? sameImplementation(
+              { riptest, check, claim },
+              v,
+              k + ': ' + name,
+              raw[0],
+              raw[1]
+            )
+          : claim(
+              `No matching answer key given for shared interface: ${k}`,
+              false
+            )
+      )(structure)
+    )
+  )([a, b])
+})
+
 export function hook() {
   /* istanbul ignore else */
   if (defined(test) && defined(expect)) {
     const jestBinaryAssert = (a, b) => expect(a).toEqual(b)
     const riptest = riptestWithConfiguration(test, jestBinaryAssert)
+    const structure = {
+      riptest,
+      check: test,
+      claim: jestBinaryAssert
+    }
     return {
       riptest,
-      same: sameImplementation({
-        riptest,
-        check: test,
-        claim: jestBinaryAssert
-      })
+      same: sameImplementation(structure),
+      shared: sameInterface(structure)
     }
   }
 }

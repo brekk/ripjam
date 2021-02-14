@@ -11,9 +11,9 @@ By default it is designed to work out of the box with `jest` but it's very easy 
 ```js
 // test.spec.js
 import { curry } from 'ramda'
-import { hook } from 'ripjam/test'
+import { hook } from './testing-tools'
 
-const { riptest, same } = hook()
+const { riptest, same, shared } = hook()
 
 function basic(x) {
   return x * 2
@@ -29,23 +29,49 @@ const mult = curry(function _multiply(a, b) {
 })
 
 same([mult(2), basic], 'double', 100, 200)
+
+const oldImplementation = { basic, a: z => 'dope: ' + z }
+const newImplementation = {
+  basic: mult(2),
+  complex: mult(-2),
+  a: x => ['dope:', x].join(' ')
+}
+
+const answers = {
+  basic: [100, 200],
+  a: ['yo', 'dope: yo']
+}
+
+shared(
+  [oldImplementation, newImplementation],
+  'test all the shared functionality',
+  answers
+)
 ```
 
 After running `jest` on the above, it will print:
 
 ```
- PASS  test.spec.js
+PASS src/test.spec.js
   ✓ "basic test": 𝞴 "basic" (unary) (2 ms)
   ✓ "basic test with array params": 𝞴 "basic" (unary)
-  ✓ "double": 𝞴 unnamed (unary) (1 ms)
+  ✓ "double": 𝞴 unnamed (unary)
   ✓ "double": 𝞴 "basic" (unary)
-  ✓ same implementation of "double": (𝞴 unnamed (unary)) and (𝞴 "basic" (unary))
+  ✓ same implementation of "double": (𝞴 unnamed (unary)) and (𝞴 "basic" (unary)) (1 ms)
+  ✓ "basic: test all the shared functionality": 𝞴 "basic" (unary)
+  ✓ "basic: test all the shared functionality": 𝞴 unnamed (unary)
+  ✓ same implementation of "basic: test all the shared functionality": (𝞴 "basic" (unary)) and (𝞴 unnamed (unary))
+  ✓ "a: test all the shared functionality": 𝞴 "a" (unary) (1 ms)
+  ✓ "a: test all the shared functionality": 𝞴 "a" (unary)
+  ✓ same implementation of "a: test all the shared functionality": (𝞴 "a" (unary)) and (𝞴 "a" (unary))
 ```
+
+If the `shared` is given two implementations like the above and the `answers` object is missing an expected value, this will throw an error.
 
 ### Custom testing hook
 
 If you would like to use a different testing framework, you can manually assemble the same behavior like so:
-```
+```js
 // custom-ripjam.js
 import { riptestWithConfiguration } from 'ripjam/test'
 
