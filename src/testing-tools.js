@@ -19,14 +19,20 @@ import {
   propOr,
   equals,
   always as K,
+  unless,
+  of,
   when
 } from 'ramda'
-import { trace } from 'xtrace'
+import { envtrace } from 'envtrace'
 import { defined } from './utils'
 import { functionDetails } from './function'
 
+const trace = envtrace('ripjam')
+
 const isArray = Array.isArray
 const nonEmptyArray = both(isArray, pipe(length, lt(0)))
+
+const autobox = unless(isArray, of)
 
 export const riptestWithConfiguration = curry(
   function _riptestWithConfiguration(
@@ -38,7 +44,9 @@ export const riptestWithConfiguration = curry(
     output
   ) {
     check(`"${name}": ${functionDetails(fn)}`, () => {
-      claim(apply(fn, isArray(input) ? input : [input]), output)
+      const applied = autobox(input)
+      const rawInput = apply(fn, applied)
+      claim(rawInput, output)
     })
   }
 )
@@ -57,7 +65,12 @@ export const sameImplementation = curry(function _sameImplementation(
     `same implementation of "${name}": (${functionDetails(
       a
     )}) and (${functionDetails(b)})`,
-    () => claim(a(input), b(input))
+    () => {
+      const applied = autobox(input)
+      const aIsTheSame = apply(a, applied)
+      const asB = apply(b, applied)
+      claim(aIsTheSame, asB)
+    }
   )
 })
 

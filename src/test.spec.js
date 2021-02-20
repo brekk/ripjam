@@ -19,6 +19,7 @@ const mult = curry(function _multiply(a, b) {
 same([mult(2), basic], 'double', 100, 200)
 
 const oldImplementation = {
+  binaryFunction: curry((a, b) => a + b),
   basic,
   a: z => 'dope: ' + z,
   skippable: x => x * x
@@ -27,17 +28,25 @@ const newImplementation = {
   basic: mult(2),
   complex: mult(-2),
   a: x => ['dope:', x].join(' '),
-  skippable: y => y * y * y
+  skippable: y => y * y * y,
+  binaryFunction: curry((a, b) => a + b)
 }
 
-shared(
-  [oldImplementation, newImplementation],
-  'test all the shared functionality',
-  { basic: [100, 200], a: ['yo', 'dope: yo'], skip: ['skippable'] }
-)
+const testLens = shared([oldImplementation, newImplementation])
 
-shared(
-  [oldImplementation, newImplementation],
-  'test only the shared implementation of basic',
-  { basic: [100, 200], a: ['yo', 'dope: yo'], only: ['basic'] }
-)
+testLens('test all the shared functionality', {
+  basic: [100, 200],
+  a: ['yo', 'dope: yo'],
+  skip: ['skippable', 'binaryFunction']
+})
+
+testLens('test only the shared implementation of basic', {
+  basic: [100, 200],
+  a: ['yo', 'dope: yo'],
+  only: ['basic']
+})
+
+testLens('binary functions can be passed an array input', {
+  only: ['binaryFunction'],
+  binaryFunction: [[3, -2], 1]
+})
