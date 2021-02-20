@@ -1,5 +1,5 @@
 import { curry } from 'ramda'
-import { hook } from './testing-tools'
+import { sameInterface, hook } from './testing-tools'
 
 const { riptest, same, shared } = hook()
 
@@ -50,3 +50,18 @@ testLens('binary functions can be passed an array input', {
   only: ['binaryFunction'],
   binaryFunction: [[3, -2], 1]
 })
+
+sameInterface(
+  {
+    riptest,
+    check: test,
+    claim: curry((a, b) =>
+      expect(a).toEqual(
+        'No matching answer key given for shared interface: a'
+      )
+    )
+  },
+  [{ a: x => x }, { a: x => x }],
+  "sameInterface will assert an error when there's no matching answer found",
+  {}
+)
