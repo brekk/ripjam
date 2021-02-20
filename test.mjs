@@ -51,6 +51,41 @@ function _curry2(fn) {
   };
 }
 
+/**
+ * Private `concat` function to merge two array-like objects.
+ *
+ * @private
+ * @param {Array|Arguments} [set1=[]] An array-like object.
+ * @param {Array|Arguments} [set2=[]] An array-like object.
+ * @return {Array} A new, merged array.
+ * @example
+ *
+ *      _concat([4, 5, 6], [1, 2, 3]); //=> [4, 5, 6, 1, 2, 3]
+ */
+function _concat(set1, set2) {
+  set1 = set1 || [];
+  set2 = set2 || [];
+  var idx;
+  var len1 = set1.length;
+  var len2 = set2.length;
+  var result = [];
+  idx = 0;
+
+  while (idx < len1) {
+    result[result.length] = set1[idx];
+    idx += 1;
+  }
+
+  idx = 0;
+
+  while (idx < len2) {
+    result[result.length] = set2[idx];
+    idx += 1;
+  }
+
+  return result;
+}
+
 function _arity(n, fn) {
   /* eslint-disable no-unused-vars */
   switch (n) {
@@ -925,6 +960,69 @@ _curry1(function always(val) {
 });
 
 /**
+ * Returns `true` if both arguments are `true`; `false` otherwise.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category Logic
+ * @sig a -> b -> a | b
+ * @param {Any} a
+ * @param {Any} b
+ * @return {Any} the first argument if it is falsy, otherwise the second argument.
+ * @see R.both, R.xor
+ * @example
+ *
+ *      R.and(true, true); //=> true
+ *      R.and(true, false); //=> false
+ *      R.and(false, true); //=> false
+ *      R.and(false, false); //=> false
+ */
+
+var and =
+/*#__PURE__*/
+_curry2(function and(a, b) {
+  return a && b;
+});
+
+/**
+ * ap applies a list of functions to a list of values.
+ *
+ * Dispatches to the `ap` method of the second argument, if present. Also
+ * treats curried functions as applicatives.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.3.0
+ * @category Function
+ * @sig [a -> b] -> [a] -> [b]
+ * @sig Apply f => f (a -> b) -> f a -> f b
+ * @sig (r -> a -> b) -> (r -> a) -> (r -> b)
+ * @param {*} applyF
+ * @param {*} applyX
+ * @return {*}
+ * @example
+ *
+ *      R.ap([R.multiply(2), R.add(3)], [1,2,3]); //=> [2, 4, 6, 4, 5, 6]
+ *      R.ap([R.concat('tasty '), R.toUpper], ['pizza', 'salad']); //=> ["tasty pizza", "tasty salad", "PIZZA", "SALAD"]
+ *
+ *      // R.ap can also be used as S combinator
+ *      // when only two functions are passed
+ *      R.ap(R.concat, R.toUpper)('Ramda') //=> 'RamdaRAMDA'
+ * @symb R.ap([f, g], [a, b]) = [f(a), f(b), g(a), g(b)]
+ */
+
+var ap =
+/*#__PURE__*/
+_curry2(function ap(applyF, applyX) {
+  return typeof applyX['fantasy-land/ap'] === 'function' ? applyX['fantasy-land/ap'](applyF) : typeof applyF.ap === 'function' ? applyF.ap(applyX) : typeof applyF === 'function' ? function (x) {
+    return applyF(x)(applyX(x));
+  } : _reduce(function (acc, f) {
+    return _concat(acc, map(f, applyX));
+  }, [], applyF);
+});
+
+/**
  * Applies function `fn` to the argument list `args`. This is useful for
  * creating a fixed-arity function from a variadic function. `fn` should be a
  * bound function if context is significant.
@@ -949,6 +1047,107 @@ var apply =
 /*#__PURE__*/
 _curry2(function apply(fn, args) {
   return fn.apply(this, args);
+});
+
+function _isFunction(x) {
+  var type = Object.prototype.toString.call(x);
+  return type === '[object Function]' || type === '[object AsyncFunction]' || type === '[object GeneratorFunction]' || type === '[object AsyncGeneratorFunction]';
+}
+
+/**
+ * "lifts" a function to be the specified arity, so that it may "map over" that
+ * many lists, Functions or other objects that satisfy the [FantasyLand Apply spec](https://github.com/fantasyland/fantasy-land#apply).
+ *
+ * @func
+ * @memberOf R
+ * @since v0.7.0
+ * @category Function
+ * @sig Number -> (*... -> *) -> ([*]... -> [*])
+ * @param {Function} fn The function to lift into higher context
+ * @return {Function} The lifted function.
+ * @see R.lift, R.ap
+ * @example
+ *
+ *      const madd3 = R.liftN(3, (...args) => R.sum(args));
+ *      madd3([1,2,3], [1,2,3], [1]); //=> [3, 4, 5, 4, 5, 6, 5, 6, 7]
+ */
+
+var liftN =
+/*#__PURE__*/
+_curry2(function liftN(arity, fn) {
+  var lifted = curryN(arity, fn);
+  return curryN(arity, function () {
+    return _reduce(ap, map(lifted, arguments[0]), Array.prototype.slice.call(arguments, 1));
+  });
+});
+
+/**
+ * "lifts" a function of arity > 1 so that it may "map over" a list, Function or other
+ * object that satisfies the [FantasyLand Apply spec](https://github.com/fantasyland/fantasy-land#apply).
+ *
+ * @func
+ * @memberOf R
+ * @since v0.7.0
+ * @category Function
+ * @sig (*... -> *) -> ([*]... -> [*])
+ * @param {Function} fn The function to lift into higher context
+ * @return {Function} The lifted function.
+ * @see R.liftN
+ * @example
+ *
+ *      const madd3 = R.lift((a, b, c) => a + b + c);
+ *
+ *      madd3([1,2,3], [1,2,3], [1]); //=> [3, 4, 5, 4, 5, 6, 5, 6, 7]
+ *
+ *      const madd5 = R.lift((a, b, c, d, e) => a + b + c + d + e);
+ *
+ *      madd5([1,2], [3], [4, 5], [6], [7, 8]); //=> [21, 22, 22, 23, 22, 23, 23, 24]
+ */
+
+var lift =
+/*#__PURE__*/
+_curry1(function lift(fn) {
+  return liftN(fn.length, fn);
+});
+
+/**
+ * A function which calls the two provided functions and returns the `&&`
+ * of the results.
+ * It returns the result of the first function if it is false-y and the result
+ * of the second function otherwise. Note that this is short-circuited,
+ * meaning that the second function will not be invoked if the first returns a
+ * false-y value.
+ *
+ * In addition to functions, `R.both` also accepts any fantasy-land compatible
+ * applicative functor.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.12.0
+ * @category Logic
+ * @sig (*... -> Boolean) -> (*... -> Boolean) -> (*... -> Boolean)
+ * @param {Function} f A predicate
+ * @param {Function} g Another predicate
+ * @return {Function} a function that applies its arguments to `f` and `g` and `&&`s their outputs together.
+ * @see R.and
+ * @example
+ *
+ *      const gt10 = R.gt(R.__, 10)
+ *      const lt20 = R.lt(R.__, 20)
+ *      const f = R.both(gt10, lt20);
+ *      f(15); //=> true
+ *      f(30); //=> false
+ *
+ *      R.both(Maybe.Just(false), Maybe.Just(55)); // => Maybe.Just(false)
+ *      R.both([false, false, 'a'], [11]); //=> [false, false, 11]
+ */
+
+var both =
+/*#__PURE__*/
+_curry2(function both(f, g) {
+  return _isFunction(f) ? function _both() {
+    return f.apply(this, arguments) && g.apply(this, arguments);
+  } : lift(and)(f, g);
 });
 
 /**
@@ -2081,6 +2280,34 @@ _curry1(function length(list) {
 });
 
 /**
+ * Returns `true` if the first argument is less than the second; `false`
+ * otherwise.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category Relation
+ * @sig Ord a => a -> a -> Boolean
+ * @param {*} a
+ * @param {*} b
+ * @return {Boolean}
+ * @see R.gt
+ * @example
+ *
+ *      R.lt(2, 1); //=> false
+ *      R.lt(2, 2); //=> false
+ *      R.lt(2, 3); //=> true
+ *      R.lt('a', 'z'); //=> true
+ *      R.lt('z', 'a'); //=> false
+ */
+
+var lt =
+/*#__PURE__*/
+_curry2(function lt(a, b) {
+  return a < b;
+});
+
+/**
  * If the given, non-null object has a value at the given path, returns the
  * value at that path. Otherwise returns the provided default value.
  *
@@ -2383,6 +2610,7 @@ const functionDetails = curry(
 );
 
 const isArray = Array.isArray;
+const nonEmptyArray = both(isArray, pipe(length, lt(0)));
 
 const riptestWithConfiguration = curry(
   function _riptestWithConfiguration(
@@ -2427,7 +2655,11 @@ const sameInterface = curry(function _sameInterface(
     chain(toPairs),
     groupBy(head),
     when(
-      () => isArray(structure.skip) && structure.skip.length > 0,
+      () => nonEmptyArray(structure.only),
+      filter(([[x]]) => includes(x, structure.only))
+    ),
+    when(
+      () => nonEmptyArray(structure.skip),
       reject(([[x]]) => includes(x, structure.skip))
     ),
     reject(pipe(length, equals(1))),

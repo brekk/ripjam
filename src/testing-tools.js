@@ -1,5 +1,7 @@
 import {
   __ as $,
+  both,
+  lt,
   nth,
   pipe,
   toPairs,
@@ -24,6 +26,7 @@ import { defined } from './utils'
 import { functionDetails } from './function'
 
 const isArray = Array.isArray
+const nonEmptyArray = both(isArray, pipe(length, lt(0)))
 
 export const riptestWithConfiguration = curry(
   function _riptestWithConfiguration(
@@ -68,7 +71,11 @@ export const sameInterface = curry(function _sameInterface(
     chain(toPairs),
     groupBy(head),
     when(
-      () => isArray(structure.skip) && structure.skip.length > 0,
+      () => nonEmptyArray(structure.only),
+      filter(([[x]]) => includes(x, structure.only))
+    ),
+    when(
+      () => nonEmptyArray(structure.skip),
       reject(([[x]]) => includes(x, structure.skip))
     ),
     reject(pipe(length, equals(1))),

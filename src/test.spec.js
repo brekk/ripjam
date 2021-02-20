@@ -35,3 +35,9 @@ shared(
   'test all the shared functionality',
   { basic: [100, 200], a: ['yo', 'dope: yo'], skip: ['skippable'] }
 )
+
+shared(
+  [oldImplementation, newImplementation],
+  'test only the shared implementation of basic',
+  { basic: [100, 200], a: ['yo', 'dope: yo'], only: ['basic'] }
+)

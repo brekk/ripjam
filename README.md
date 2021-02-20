@@ -66,7 +66,24 @@ PASS test.spec.js
   ✓ same implementation of "a: test all the shared functionality": (𝞴 "a" (unary)) and (𝞴 "a" (unary))
 ```
 
-If the `shared` is given two implementations like the above and the `answers` object is missing an expected value, this will throw an error.
+## Exclusive / specific interface testing
+
+If the `shared` is given two implementations like the above and the `answers` object is missing an expected value, this will throw an error, unless you add a specific `only` or `skip` array to your answers object, e.g.
+
+```js
+const answers = {
+  basic: [100, 200],
+  a: ['yo', 'dope: yo']
+  only: ['a'], // test only the 'a' interface on both objects
+  skip: ['basic'] // do not test the 'basic' interface on both objects (not needed here as `only` above does the same)
+}
+
+shared(
+  [oldImplementation, newImplementation],
+  'test all the shared functionality',
+  answers
+)
+```
 
 ### Custom testing hook
 
