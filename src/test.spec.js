@@ -18,15 +18,20 @@ const mult = curry(function _multiply(a, b) {
 
 same([mult(2), basic], 'double', 100, 200)
 
-const oldImplementation = { basic, a: z => 'dope: ' + z }
+const oldImplementation = {
+  basic,
+  a: z => 'dope: ' + z,
+  skippable: x => x * x
+}
 const newImplementation = {
   basic: mult(2),
   complex: mult(-2),
-  a: x => ['dope:', x].join(' ')
+  a: x => ['dope:', x].join(' '),
+  skippable: y => y * y * y
 }
 
 shared(
   [oldImplementation, newImplementation],
   'test all the shared functionality',
-  { basic: [100, 200], a: ['yo', 'dope: yo'] }
+  { basic: [100, 200], a: ['yo', 'dope: yo'], skip: ['skippable'] }
 )

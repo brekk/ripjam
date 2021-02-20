@@ -6,6 +6,7 @@ import {
   groupBy,
   head,
   filter,
+  includes,
   reject,
   length,
   chain,
@@ -15,11 +16,14 @@ import {
   cond,
   propOr,
   equals,
-  always as K
+  always as K,
+  when
 } from 'ramda'
 import { trace } from 'xtrace'
 import { defined } from './utils'
 import { functionDetails } from './function'
+
+const isArray = Array.isArray
 
 export const riptestWithConfiguration = curry(
   function _riptestWithConfiguration(
@@ -31,7 +35,7 @@ export const riptestWithConfiguration = curry(
     output
   ) {
     check(`"${name}": ${functionDetails(fn)}`, () => {
-      claim(apply(fn, Array.isArray(input) ? input : [input]), output)
+      claim(apply(fn, isArray(input) ? input : [input]), output)
     })
   }
 )
@@ -63,6 +67,10 @@ export const sameInterface = curry(function _sameInterface(
   pipe(
     chain(toPairs),
     groupBy(head),
+    when(
+      () => isArray(structure.skip) && structure.skip.length > 0,
+      reject(([[x]]) => includes(x, structure.skip))
+    ),
     reject(pipe(length, equals(1))),
     map(map(nth(1))),
     toPairs,
