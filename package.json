@@ -23,7 +23,7 @@
     "snang": "^0.1.4"
   },
   "name": "ripjam",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "tools for breaking and re-assembling things",
   "main": "ripjam.js",
   "module": "ripjam.mjs",

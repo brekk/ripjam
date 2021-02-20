@@ -1598,6 +1598,77 @@ _curry2(function equals(a, b) {
   return _equals(a, b, [], []);
 });
 
+function _indexOf(list, a, idx) {
+  var inf, item; // Array.prototype.indexOf doesn't exist below IE9
+
+  if (typeof list.indexOf === 'function') {
+    switch (typeof a) {
+      case 'number':
+        if (a === 0) {
+          // manually crawl the list to distinguish between +0 and -0
+          inf = 1 / a;
+
+          while (idx < list.length) {
+            item = list[idx];
+
+            if (item === 0 && 1 / item === inf) {
+              return idx;
+            }
+
+            idx += 1;
+          }
+
+          return -1;
+        } else if (a !== a) {
+          // NaN
+          while (idx < list.length) {
+            item = list[idx];
+
+            if (typeof item === 'number' && item !== item) {
+              return idx;
+            }
+
+            idx += 1;
+          }
+
+          return -1;
+        } // non-zero numbers can utilise Set
+
+
+        return list.indexOf(a, idx);
+      // all these types can utilise Set
+
+      case 'string':
+      case 'boolean':
+      case 'function':
+      case 'undefined':
+        return list.indexOf(a, idx);
+
+      case 'object':
+        if (a === null) {
+          // null can utilise Set
+          return list.indexOf(a, idx);
+        }
+
+    }
+  } // anything else not covered above, defer to R.equals
+
+
+  while (idx < list.length) {
+    if (equals(list[idx], a)) {
+      return idx;
+    }
+
+    idx += 1;
+  }
+
+  return -1;
+}
+
+function _includes(a, list) {
+  return _indexOf(list, a, 0) >= 0;
+}
+
 function _complement(f) {
   return function () {
     return !f.apply(this, arguments);
@@ -1956,6 +2027,33 @@ reduceBy(function (acc, item) {
   return acc;
 }, null)));
 
+/**
+ * Returns `true` if the specified value is equal, in [`R.equals`](#equals)
+ * terms, to at least one element of the given list; `false` otherwise.
+ * Works also with strings.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.26.0
+ * @category List
+ * @sig a -> [a] -> Boolean
+ * @param {Object} a The item to compare against.
+ * @param {Array} list The array to consider.
+ * @return {Boolean} `true` if an equivalent item is in the list, `false` otherwise.
+ * @see R.any
+ * @example
+ *
+ *      R.includes(3, [1, 2, 3]); //=> true
+ *      R.includes(4, [1, 2, 3]); //=> false
+ *      R.includes({ name: 'Fred' }, [{ name: 'Fred' }]); //=> true
+ *      R.includes([42], [[42]]); //=> true
+ *      R.includes('ba', 'banana'); //=>true
+ */
+
+var includes =
+/*#__PURE__*/
+_curry2(_includes);
+
 function _isNumber(x) {
   return Object.prototype.toString.call(x) === '[object Number]';
 }
@@ -2072,6 +2170,41 @@ _curry1(function toPairs(obj) {
   }
 
   return pairs;
+});
+
+/**
+ * Tests the final argument by passing it to the given predicate function. If
+ * the predicate is satisfied, the function will return the result of calling
+ * the `whenTrueFn` function with the same argument. If the predicate is not
+ * satisfied, the argument is returned as is.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.18.0
+ * @category Logic
+ * @sig (a -> Boolean) -> (a -> a) -> a -> a
+ * @param {Function} pred       A predicate function
+ * @param {Function} whenTrueFn A function to invoke when the `condition`
+ *                              evaluates to a truthy value.
+ * @param {*}        x          An object to test with the `pred` function and
+ *                              pass to `whenTrueFn` if necessary.
+ * @return {*} Either `x` or the result of applying `x` to `whenTrueFn`.
+ * @see R.ifElse, R.unless, R.cond
+ * @example
+ *
+ *      // truncate :: String -> String
+ *      const truncate = R.when(
+ *        R.propSatisfies(R.gt(R.__, 10), 'length'),
+ *        R.pipe(R.take(10), R.append('…'), R.join(''))
+ *      );
+ *      truncate('12345');         //=> '12345'
+ *      truncate('0123456789ABC'); //=> '0123456789…'
+ */
+
+var when =
+/*#__PURE__*/
+_curry3(function when(pred, whenTrueFn, x) {
+  return pred(x) ? whenTrueFn(x) : x;
 });
 
 var PLACEHOLDER = "🍛";
@@ -2249,6 +2382,8 @@ const functionDetails = curry(
     )})`
 );
 
+const isArray = Array.isArray;
+
 const riptestWithConfiguration = curry(
   function _riptestWithConfiguration(
     check,
@@ -2259,7 +2394,7 @@ const riptestWithConfiguration = curry(
     output
   ) {
     check(`"${name}": ${functionDetails(fn)}`, () => {
-      claim(apply(fn, Array.isArray(input) ? input : [input]), output);
+      claim(apply(fn, isArray(input) ? input : [input]), output);
     });
   }
 );
@@ -2291,6 +2426,10 @@ const sameInterface = curry(function _sameInterface(
   pipe(
     chain(toPairs),
     groupBy(head),
+    when(
+      () => isArray(structure.skip) && structure.skip.length > 0,
+      reject(([[x]]) => includes(x, structure.skip))
+    ),
     reject(pipe(length, equals(1))),
     map(map(nth(1))),
     toPairs,
