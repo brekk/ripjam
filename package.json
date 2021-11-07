@@ -17,9 +17,20 @@
     "rollup": "^2.39.0",
     "rollup-plugin-add-shebang": "^0.3.1"
   },
-  "keywords": ["test", "jest", "shared interface", "same functionality", "tools", "build", "break", "rip", "jam"],
+  "keywords": [
+    "test",
+    "jest",
+    "shared interface",
+    "same functionality",
+    "tools",
+    "build",
+    "break",
+    "rip",
+    "jam"
+  ],
   "dependencies": {
     "envtrace": "^0.0.2",
+    "fluture": "^14.0.0",
     "ramda": "^0.27.1",
     "snang": "^0.1.4"
   },

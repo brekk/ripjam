@@ -24,6 +24,9 @@ import {
   when
 } from 'ramda'
 import { envtrace } from 'envtrace'
+import { isFuture, ap, resolve } from 'fluture'
+
+import { fork } from './future'
 import { defined } from './utils'
 import { functionDetails } from './function'
 
@@ -34,19 +37,42 @@ const nonEmptyArray = both(isArray, pipe(length, lt(0)))
 
 const autobox = unless(isArray, of)
 
+const isPromise = x => x && x.then && x.catch
+
+const temporalDetails = x => {
+  const future = isFuture(x)
+  const synchronous = !isPromise(x) && !future
+  return { future, synchronous }
+}
+
 export const riptestWithConfiguration = curry(
   function _riptestWithConfiguration(
-    check,
-    claim,
+    { check, claim },
     fn,
     name,
     input,
-    output
+    expected
   ) {
-    check(`"${name}": ${functionDetails(fn)}`, () => {
+    check(`"${name}": ${functionDetails(fn)}`, done => {
+      const finish = () => done()
       const applied = autobox(input)
-      const rawInput = apply(fn, applied)
-      claim(rawInput, output)
+      const rawOutput = apply(fn, applied)
+      const { future, synchronous } = temporalDetails(rawOutput)
+      if (synchronous) {
+        claim(rawOutput, expected)
+        return done()
+      } else {
+        const assertValue = pipe(
+          trace('async assertion'),
+          raw => claim(raw, expected),
+          finish
+        )
+        if (future) {
+          fork(done, assertValue, rawOutput)
+        } else {
+          rawOutput.catch(done).then(assertValue)
+        }
+      }
     })
   }
 )
@@ -65,17 +91,51 @@ export const sameImplementation = curry(function _sameImplementation(
     `same implementation of "${name}": (${functionDetails(
       a
     )}) and (${functionDetails(b)})`,
-    () => {
+    done => {
+      const finish = () => done()
       const applied = autobox(input)
       const aIsTheSame = apply(a, applied)
       const asB = apply(b, applied)
-      claim(aIsTheSame, asB)
+      const { future: aF, synchronous: aS } = temporalDetails(
+        aIsTheSame
+      )
+      const { future: bF, synchronous: bS } = temporalDetails(asB)
+      claim(aF, bF)
+      claim(aS, bS)
+      // synchronous?
+      if (!aS && !bS) {
+        // future?
+        if (aF && bF) {
+          fork(
+            done,
+            ({ x, y }) => {
+              claim(x, y)
+              done()
+            },
+            ap(aIsTheSame)(ap(asB)(resolve(x => y => ({ x, y }))))
+          )
+        } else {
+          aIsTheSame
+            .then(aRaw => asB.then(bRaw => claim(aRaw, bRaw)))
+            .then(finish)
+        }
+      } else {
+        claim(aIsTheSame, asB)
+        done()
+      }
     }
   )
 })
 
+const exclude = curry((match, sifter, raw) =>
+  when(
+    () => nonEmptyArray(match),
+    sifter(([[x]]) => includes(x, match))
+  )(raw)
+)
+
 export const sameInterface = curry(function _sameInterface(
-  { riptest, check, claim },
+  config,
   [a, b],
   name,
   structure
@@ -83,14 +143,8 @@ export const sameInterface = curry(function _sameInterface(
   pipe(
     chain(toPairs),
     groupBy(head),
-    when(
-      () => nonEmptyArray(structure.only),
-      filter(([[x]]) => includes(x, structure.only))
-    ),
-    when(
-      () => nonEmptyArray(structure.skip),
-      reject(([[x]]) => includes(x, structure.skip))
-    ),
+    exclude(structure.only, filter),
+    exclude(structure.skip, reject),
     reject(pipe(length, equals(1))),
     map(map(nth(1))),
     toPairs,
@@ -98,13 +152,13 @@ export const sameInterface = curry(function _sameInterface(
       pipe(propOr(false, k), raw =>
         raw
           ? sameImplementation(
-              { riptest, check, claim },
+              config,
               v,
               k + ': ' + name,
               raw[0],
               raw[1]
             )
-          : claim(
+          : config.claim(
               `No matching answer key given for shared interface: ${k}`,
               false
             )
@@ -113,20 +167,27 @@ export const sameInterface = curry(function _sameInterface(
   )([a, b])
 })
 
+export const testAndExpectDefined = () =>
+  defined(test) && defined(expect)
+
 export function hook() {
-  /* istanbul ignore else */
-  if (defined(test) && defined(expect)) {
-    const jestBinaryAssert = (a, b) => expect(a).toEqual(b)
-    const riptest = riptestWithConfiguration(test, jestBinaryAssert)
-    const structure = {
-      riptest,
-      check: test,
-      claim: jestBinaryAssert
-    }
-    return {
-      riptest,
-      same: sameImplementation(structure),
-      shared: sameInterface(structure)
-    }
+  /* istanbul ignore next */
+  if (!testAndExpectDefined()) {
+    /* istanbul ignore next */
+    throw new Error(
+      "Unable to hook without 'test' and 'expect' globals defined. Consider running 'riptestWithConfiguration'?"
+    )
+  }
+  const jestBinaryAssert = (a, b) => expect(a).toEqual(b)
+  const config = { check: test, claim: jestBinaryAssert }
+  const riptest = riptestWithConfiguration(config)
+  const structure = {
+    riptest,
+    ...config
+  }
+  return {
+    riptest,
+    same: sameImplementation(structure),
+    shared: sameInterface(structure)
   }
 }
