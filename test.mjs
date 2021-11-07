@@ -6666,7 +6666,13 @@ const functionDetails = curry(
     )})`
 );
 
-const trace = envtrace('ripjam');
+const debug$1 = complextrace('ripjam', [
+  'hook',
+  'riptestWithConfiguration',
+  'sameImplementation',
+  'sameInterface',
+  'temporalDetails'
+]);
 
 const isArray = Array.isArray;
 const nonEmptyArray = both(isArray, pipe(length, lt(0)));
@@ -6676,9 +6682,12 @@ const autobox = unless(isArray, of);
 const isPromise = x => x && x.then && x.catch;
 
 const temporalDetails = x => {
+  debug$1.temporalDetails('input', x);
   const future = isFuture(x);
   const synchronous = !isPromise(x) && !future;
-  return { future, synchronous }
+  const output = { future, synchronous };
+  debug$1.temporalDetails('output', output);
+  return output
 };
 
 const riptestWithConfiguration = curry(
@@ -6690,16 +6699,25 @@ const riptestWithConfiguration = curry(
     expected
   ) {
     check(`"${name}": ${functionDetails(fn)}`, done => {
+      debug$1.riptestWithConfiguration('input', {
+        fn,
+        name,
+        input,
+        expected
+      });
       const finish = () => done();
       const applied = autobox(input);
+
+      debug$1.riptestWithConfiguration('arguments', applied);
       const rawOutput = apply(fn, applied);
+      debug$1.riptestWithConfiguration('rawOutput', rawOutput);
       const { future, synchronous } = temporalDetails(rawOutput);
       if (synchronous) {
         claim(rawOutput, expected);
         return done()
       } else {
         const assertValue = pipe(
-          trace('async assertion'),
+          debug$1.riptestWithConfiguration('async output'),
           raw => claim(raw, expected),
           finish
         );
@@ -6728,14 +6746,19 @@ const sameImplementation = curry(function _sameImplementation(
       a
     )}) and (${functionDetails(b)})`,
     done => {
+      debug$1.sameImplementation('input', { name, input, output });
       const finish = () => done();
       const applied = autobox(input);
-      const aIsTheSame = apply(a, applied);
-      const asB = apply(b, applied);
-      const { future: aF, synchronous: aS } = temporalDetails(
-        aIsTheSame
-      );
-      const { future: bF, synchronous: bS } = temporalDetails(asB);
+      const outputA = apply(a, applied);
+      const outputB = apply(b, applied);
+      debug$1.sameImplementation('rawOutputs', {
+        a: outputA,
+        b: outputB
+      });
+      const [
+        { future: aF, synchronous: aS },
+        { future: bF, synchronous: bS }
+      ] = map(temporalDetails)([outputA, outputB]);
       claim(aF, bF);
       claim(aS, bS);
       // synchronous?
@@ -6745,20 +6768,30 @@ const sameImplementation = curry(function _sameImplementation(
           fork$1(
             done,
             ({ x, y }) => {
+              debug$1.sameImplementation('future output', { x, y });
               claim(x, y);
               done();
             },
-            ap$1(aIsTheSame)(ap$1(asB)(resolve(x => y => ({ x, y }))))
+            ap$1(outputA)(ap$1(outputB)(resolve(x => y => ({ x, y }))))
           );
         } else {
-          aIsTheSame
-            .then(aRaw => asB.then(bRaw => claim(aRaw, bRaw)))
+          // promise
+          outputA
+            .then(aRaw =>
+              outputB.then(bRaw => {
+                debug$1.sameImplementation('async output', {
+                  x: aRaw,
+                  y: bRaw
+                });
+                claim(aRaw, bRaw);
+              })
+            )
             .then(finish);
         }
-      } else {
-        claim(aIsTheSame, asB);
-        done();
+        return
       }
+      claim(outputA, outputB);
+      done();
     }
   );
 });
@@ -6777,6 +6810,7 @@ const sameInterface = curry(function _sameInterface(
   structure
 ) {
   pipe(
+    debug$1.sameInterface('input'),
     chain(toPairs),
     groupBy(head),
     exclude(structure.only, filter),
@@ -6807,8 +6841,10 @@ const testAndExpectDefined = () =>
   defined(test) && defined(expect);
 
 function hook() {
+  debug$1.hook('preparing to ripjam', '💀jam');
   /* istanbul ignore next */
   if (!testAndExpectDefined()) {
+    debug$1.hook('Unable to find test or expect', { test, expect });
     /* istanbul ignore next */
     throw new Error(
       "Unable to hook without 'test' and 'expect' globals defined. Consider running 'riptestWithConfiguration'?"
