@@ -35,16 +35,11 @@
     "snang": "^0.1.4"
   },
   "name": "ripjam",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "tools for breaking and re-assembling things",
   "main": "ripjam.js",
   "module": "ripjam.mjs",
-  "files": [
-    "ripjam.js",
-    "ripjam.mjs",
-    "test.js",
-    "test.mjs"
-  ],
+  "files": ["ripjam.js", "ripjam.mjs", "test.js", "test.mjs"],
   "repository": "https://github.com/brekk/ripjam",
   "author": "brekk",
   "license": "ISC",
